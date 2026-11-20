@@ -33,9 +33,28 @@ mkdir -p out && MAKEFUN_OUTPUT_DIR=out python3 main.py
 
 ## Verify
 
+`main.py` validates before copying: the vendored file must be a JPEG or
+PNG, its frame header must parse (JPEG SOF0/SOF2, PNG IHDR), and it must
+measure exactly 1024×1024 — anything else fails with a clear error on
+stderr and exit code 1. After copying it checks the destination holds
+exactly the source bytes. Runs are deterministic: every run writes the
+same bytes.
+
 ```sh
-python3 -c "from PIL import Image; im = Image.open('out/entry.png'); print(im.size, im.format)"
+# run it
+mkdir -p out && MAKEFUN_OUTPUT_DIR=out python3 main.py
+
+# the output must be byte-identical to the vendored image
 cmp entry.png out/entry.png && echo "byte-identical"
+
+# determinism: three runs, one hash
+for i in 1 2 3; do
+  mkdir -p "run$i" && MAKEFUN_OUTPUT_DIR="run$i" python3 main.py
+done
+sha256sum entry.png run1/entry.png run2/entry.png run3/entry.png
+
+# the image is a 1024x1024 JPEG
+file out/entry.png
 ```
 
 ---
